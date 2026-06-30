@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>터미니드 전선 — 정화 기록부</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Saira:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0e0a;
+    --bg2:#13160e;
+    --panel:#181c11;
+    --panel2:#1d2215;
+    --line:#2c321f;
+    --line2:#3a4129;
+    --amber:#f0b429;
+    --amber-dim:#9a7a22;
+    --steel:#d2d6c7;
+    --dim:#7a8068;
+    --hazard:#e8552d;
+    --cleared:#b9d84a;
+    --gloom:#9a6dd4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(240,180,41,.02) 0 1px, transparent 1px 3px),
+      radial-gradient(120% 80% at 50% -10%, rgba(240,180,41,.06), transparent 60%);
+    color:var(--steel);
+    font-family:"Saira", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 18px;}
+
+  /* ---------- header ---------- */
+  header{
+    border-bottom:1px solid var(--line);
+    margin-bottom:22px;
+    padding:30px 0 22px;
+    position:relative;
+  }
+  .eyebrow{
+    font-family:"JetBrains Mono", monospace;
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--amber-dim);
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  }
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--amber-dim);display:inline-block;}
+  h1{
+    font-family:"Oswald", sans-serif;font-weight:700;
+    font-size:clamp(30px,7vw,56px);line-height:.95;
+    letter-spacing:.01em;text-transform:uppercase;
+    margin:14px 0 8px;color:var(--steel);
+  }
+  h1 .acc{color:var(--amber);}
+  .sub{font-size:14px;color:var(--dim);max-width:62ch;line-height:1.5;}
+  .classified{
+    position:absolute;top:30px;right:0;
+    font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;
+    color:var(--hazard);border:1px solid var(--hazard);
+    padding:4px 8px;transform:rotate(0deg);opacity:.8;
+  }
+  @media(max-width:560px){.classified{position:static;display:inline-block;margin-top:14px;}}
+
+  /* ---------- progress meter ---------- */
+  .meter{
+    background:var(--panel);border:1px solid var(--line);
+    padding:16px 18px;margin-bottom:18px;
+  }
+  .meter-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .meter-label{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);}
+  .meter-val{font-family:"Oswald",sans-serif;font-weight:600;font-size:26px;color:var(--amber);line-height:1;}
+  .meter-val small{font-size:14px;color:var(--dim);font-weight:400;}
+  .bar{
+    margin-top:12px;height:14px;background:#0a0c07;border:1px solid var(--line2);
+    position:relative;overflow:hidden;
+    background-image:repeating-linear-gradient(90deg, transparent 0 9px, rgba(58,65,41,.6) 9px 10px);
+  }
+  .bar-fill{
+    height:100%;width:0%;background:var(--amber);
+    background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.18) 0 6px, transparent 6px 12px);
+    transition:width .5s cubic-bezier(.2,.8,.2,1);
+  }
+  .bar-fill.done{background:var(--cleared);}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px;align-items:center;}
+  button.ctl, label.ctl{
+    font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    background:transparent;color:var(--steel);border:1px solid var(--line2);
+    padding:8px 13px;cursor:pointer;transition:.15s;
+  }
+  button.ctl:hover, label.ctl:hover{border-color:var(--amber);color:var(--amber);}
+  button.ctl.active{background:var(--amber);color:#0c0e0a;border-color:var(--amber);}
+  .controls .spacer{flex:1 1 auto;}
+  button.ctl.danger:hover{border-color:var(--hazard);color:var(--hazard);}
+
+  /* ---------- sector ---------- */
+  .sector{margin-bottom:30px;}
+  .sector-head{
+    display:flex;align-items:baseline;gap:14px;margin-bottom:12px;
+    border-bottom:1px solid var(--line);padding-bottom:8px;
+  }
+  .sector-code{
+    font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;
+    color:#0c0e0a;background:var(--amber);padding:3px 8px;white-space:nowrap;
+  }
+  .sector-name{font-family:"Oswald",sans-serif;font-weight:500;text-transform:uppercase;letter-spacing:.05em;font-size:17px;color:var(--steel);}
+  .sector-count{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);}
+
+  /* ---------- planet card ---------- */
+  .card{
+    display:grid;grid-template-columns:46px 1fr auto;gap:0;
+    background:var(--panel);border:1px solid var(--line);
+    margin-bottom:9px;position:relative;overflow:hidden;transition:.2s;
+  }
+  .card:hover{border-color:var(--line2);}
+  .card.cleared{border-color:rgba(185,216,74,.45);background:var(--panel2);}
+  .card.dead{opacity:.62;}
+
+  .chk{
+    border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;background:#0e110a;
+  }
+  .chk input{position:absolute;opacity:0;width:0;height:0;}
+  .box{
+    width:20px;height:20px;border:1px solid var(--line2);position:relative;transition:.15s;
+  }
+  .chk:hover .box{border-color:var(--amber);}
+  .card.cleared .box{background:var(--cleared);border-color:var(--cleared);}
+  .card.cleared .box::after{
+    content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;
+    border:solid #0c0e0a;border-width:0 2px 2px 0;transform:rotate(42deg);
+  }
+
+  .body{padding:11px 14px;min-width:0;}
+  .pname{font-family:"Oswald",sans-serif;font-weight:600;font-size:19px;text-transform:uppercase;letter-spacing:.02em;color:var(--steel);line-height:1.05;}
+  .card.cleared .pname{color:var(--cleared);}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 0;}
+  .tag{
+    font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.05em;
+    padding:2px 7px;border:1px solid var(--line2);color:var(--dim);white-space:nowrap;
+  }
+  .tag.hz{color:var(--hazard);border-color:rgba(232,85,45,.45);}
+  .tag.sp{color:var(--gloom);border-color:rgba(154,109,212,.45);}
+  .tag.dead{color:var(--hazard);border-color:var(--hazard);background:rgba(232,85,45,.08);}
+  .note{font-size:13px;color:var(--dim);margin-top:8px;line-height:1.45;}
+
+  .meta{
+    border-left:1px solid var(--line);padding:11px 14px;
+    display:flex;flex-direction:column;gap:8px;justify-content:center;min-width:172px;
+  }
+  .meta label{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:3px;}
+  .meta input{
+    width:100%;background:#0a0c07;border:1px solid var(--line2);color:var(--steel);
+    font-family:"JetBrains Mono",monospace;font-size:12px;padding:6px 8px;
+  }
+  .meta input::placeholder{color:#4f543f;}
+  .meta input:focus{outline:none;border-color:var(--amber);}
+  .meta input[type="date"]{color-scheme:dark;}
+
+  /* stamp */
+  .stamp{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%) rotate(-11deg);
+    font-family:"Oswald",sans-serif;font-weight:700;font-size:13px;letter-spacing:.18em;
+    color:var(--cleared);border:2px solid var(--cleared);padding:3px 9px;
+    text-transform:uppercase;opacity:0;pointer-events:none;transition:opacity .25s;
+    background:rgba(12,14,10,.35);
+  }
+  .card.cleared .stamp{opacity:.85;}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+
+  @media(max-width:680px){
+    .card{grid-template-columns:42px 1fr;}
+    .meta{grid-column:1 / -1;border-left:none;border-top:1px solid var(--line);flex-direction:row;}
+    .meta>div{flex:1;}
+    .stamp{display:none;}
+  }
+
+  footer{
+    margin-top:34px;border-top:1px solid var(--line);padding-top:16px;
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);line-height:1.6;
+  }
+  footer .warn{color:var(--amber-dim);}
+  .save-flash{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--amber);color:#0c0e0a;font-family:"JetBrains Mono",monospace;font-size:11px;
+    letter-spacing:.1em;padding:7px 16px;opacity:0;transition:.25s;pointer-events:none;text-transform:uppercase;
+  }
+  .save-flash.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Super Earth Armed Forces // 작전 단말기</div>
+    <h1>터미니드 전선<br><span class="acc">정화 기록부</span></h1>
+    <p class="sub">벌레(터미니드) 전선 행성 순회 체크리스트. 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 진척도는 브라우저에 자동 저장됩니다.</p>
+    <div class="classified">분류: 기밀</div>
+  </header>
+
+  <div class="meter">
+    <div class="meter-top">
+      <span class="meter-label">정화 진척도 · Liberation Progress</span>
+      <span class="meter-val"><span id="pCur">0</span> / <span id="pTot">0</span> <small>(<span id="pPct">0</span>%)</small></span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl active" id="fAll">전체 보기</button>
+    <button class="ctl" id="fOpen">미정화만</button>
+    <span class="spacer"></span>
+    <button class="ctl" id="btnExport">내보내기</button>
+    <label class="ctl" for="importFile">불러오기</label>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+    <button class="ctl danger" id="btnReset">초기화</button>
+  </div>
+
+  <div id="list"></div>
+
+  <footer>
+    <span class="warn">⚠ 작전 참고:</span> 행성 소유권은 실시간 갤럭틱 워에 따라 매일 바뀝니다. 이 목록은 <b>터미니드 전선(은하 동부) 구역에 속한 행성과 각 행성의 고정 환경/특징</b> 기준으로 정리되었습니다. 전선이 인접 구역으로 밀릴 경우 목록에 없는 행성에서도 벌레가 출현할 수 있습니다.<br><br>
+    Meridia는 메리디안 특이점(블랙홀)으로 붕괴되어 현재 맵에 없으며 기록 목적으로만 포함했습니다. 진행 상황은 이 브라우저에 저장되므로, 백업하려면 <b>내보내기</b>로 JSON 파일을 보관하세요.
+  </footer>
+</div>
+
+<div class="save-flash" id="flash">저장됨</div>
+
+<script>
+const HAZARDS = ["파이어 토네이도","이온 폭풍","산성 폭풍","지진","극저온","고온","짙은 안개","폭우"];
+const SPECIAL = ["소멸","Gloom 경계","Gloom 침식","하이브 월드","온대림"];
+
+const GROUPS = [
+  { code:"UMLAUT", name:"방벽 행성 · TCS", planets:[
+    {n:"Fenrir III", env:["설원/동토"], note:"TCS 방벽 행성. 포식자 변종(Predator Strain) 출몰지"},
+    {n:"Erata Prime", env:["사막","Gloom 경계"], note:"TCS 방벽 행성"},
+    {n:"Turing", env:["사막"], note:"TCS 방벽 행성"},
+    {n:"Meridia", env:["소멸"], dead:true, note:"슈퍼콜로니 폭주 후 블랙홀(메리디안 특이점)로 붕괴. 현재 맵에 없음 — 기록용"},
+  ]},
+  { code:"MIRIN · DRACO · JIN XI", name:"핵심 벌레 전선", planets:[
+    {n:"Hellmire", env:["작열 사막","파이어 토네이도","고온"], note:"가장 악명높은 화염 행성"},
+    {n:"Estanu", env:["한대 정글","극저온"], note:"E-710 농장 거점, Gloom 경계"},
+    {n:"Crimsica", env:["정글","이온 폭풍"], note:"E-710 농장"},
+    {n:"Fori Prime", env:["지진"], note:"벌레 재침공 발판"},
+    {n:"Gacrux", env:["늪지"], note:"패치로 늪 바이옴 전환"},
+    {n:"Oshaune", env:["하이브 월드","폭우"], note:"동굴 시스템 — 내부에선 스트라타젬 호출 제한"},
+    {n:"Esker", env:["산성 폭풍"], note:"Hellmire 인접 전선"},
+    {n:"Nivel 43", env:["짙은 안개"], note:"하이브 브레이커 작전 대상지"},
+  ]},
+  { code:"GLOOM", name:"글룸 & 심층 벌레 우주", planets:[
+    {n:"Enuliale", env:["이온 폭풍"], note:"Gloom(글룸) 발원지"},
+    {n:"Azur Secundus", env:["Gloom 침식"], note:"글룸에 삼켜진 행성 (Sten Sector)"},
+    {n:"Lesath", env:["극저온"], note:"글룸 인근 전선"},
+    {n:"Acamar IV", env:[], note:"글룸 작전 거점"},
+    {n:"Pherkad Secundus", env:[], note:"벌레 최대 팽창선"},
+    {n:"Moradesh", env:[], note:"벌레 최대 팽창선"},
+    {n:"Mort", env:["짙은 안개"], note:""},
+    {n:"Pandion-XXIV", env:["짙은 안개"], note:""},
+    {n:"Penta", env:["짙은 안개"], note:""},
+    {n:"Choepessa IV", env:["극저온"], note:""},
+    {n:"Senge 23", env:["지진"], note:""},
+    {n:"Mekbuda", env:["지진"], note:""},
+    {n:"Pöpli IX", env:["파이어 토네이도"], note:""},
+  ]},
+  { code:"NEW · 2186", name:"신규 · 특수 월드", planets:[
+    {n:"Brilliance", env:["온대림"], note:"2186 신규. 포자 폭발 변종(Spore Burst)"},
+    {n:"Luxuriant", env:["온대림"], note:"2186 신규. 포자 폭발 변종"},
+    {n:"Big Rock", env:[], note:"포자 폭발 변종 진화체 발견지"},
+  ]},
+  { code:"ORION", name:"초기 교두보", planets:[
+    {n:"Heeth", env:[], note:"초기 벌레 교두보 (Orion Sector)"},
+    {n:"Angel's Venture", env:[], note:"초기 벌레 교두보 (Orion Sector)"},
+  ]},
+];
+
+const KEY = "hd2_terminid_log_v1";
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ state = {}; }
+
+let filter = "all";
+const idOf = n => n.toLowerCase().replace(/[^a-z0-9가-힣]+/g,"_");
+
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+  flash();
+}
+let flashT;
+function flash(){
+  const f = document.getElementById("flash");
+  f.classList.add("show");
+  clearTimeout(flashT);
+  flashT = setTimeout(()=>f.classList.remove("show"), 1100);
+}
+
+function tagClass(t){
+  if(HAZARDS.includes(t)) return "tag hz";
+  if(t==="소멸") return "tag dead";
+  if(SPECIAL.includes(t)) return "tag sp";
+  return "tag";
+}
+
+function render(){
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  let total=0, done=0;
+
+  GROUPS.forEach(g=>{
+    const visible = g.planets.filter(p=>{
+      const s = state[idOf(p.n)] || {};
+      if(filter==="open") return !s.cleared;
+      return true;
+    });
+
+    g.planets.forEach(p=>{ total++; if((state[idOf(p.n)]||{}).cleared) done++; });
+    if(visible.length===0) return;
+
+    const sec = document.createElement("section");
+    sec.className="sector";
+    const gd = g.planets.filter(p=>(state[idOf(p.n)]||{}).cleared).length;
+    sec.innerHTML = `<div class="sector-head">
+        <span class="sector-code">${g.code}</span>
+        <span class="sector-name">${g.name}</span>
+        <span class="sector-count">${gd}/${g.planets.length} 정화</span>
+      </div>`;
+
+    visible.forEach(p=>{
+      const id = idOf(p.n);
+      const s = state[id] || {};
+      const card = document.createElement("div");
+      card.className = "card" + (s.cleared?" cleared":"") + (p.dead?" dead":"");
+      const tags = (p.env||[]).map(t=>`<span class="${tagClass(t)}">${t}</span>`).join("");
+      card.innerHTML = `
+        <label class="chk">
+          <input type="checkbox" ${s.cleared?"checked":""} data-id="${id}">
+          <span class="box"></span>
+        </label>
+        <div class="body">
+          <div class="pname">${p.n}</div>
+          <div class="tags">${tags}</div>
+          ${p.note?`<div class="note">${p.note}</div>`:""}
+        </div>
+        <div class="meta">
+          <div>
+            <label>정화일</label>
+            <input type="date" data-id="${id}" data-f="date" value="${s.date||""}">
+          </div>
+          <div>
+            <label>메모</label>
+            <input type="text" data-id="${id}" data-f="notes" placeholder="난이도 / 표본 등" value="${(s.notes||"").replace(/"/g,'&quot;')}">
+          </div>
+        </div>
+        <div class="stamp">정화 완료</div>`;
+      sec.appendChild(card);
+    });
+    list.appendChild(sec);
+  });
+
+  document.getElementById("pCur").textContent = done;
+  document.getElementById("pTot").textContent = total;
+  const pct = total? Math.round(done/total*100):0;
+  document.getElementById("pPct").textContent = pct;
+  const fill = document.getElementById("barFill");
+  fill.style.width = pct + "%";
+  fill.classList.toggle("done", pct===100);
+}
+
+document.getElementById("list").addEventListener("change", e=>{
+  const id = e.target.dataset.id;
+  if(!id) return;
+  state[id] = state[id] || {};
+  if(e.target.type==="checkbox"){
+    state[id].cleared = e.target.checked;
+    if(e.target.checked && !state[id].date){
+      const t=new Date(); state[id].date = t.toISOString().slice(0,10);
+    }
+    save(); render();
+  } else {
+    state[id][e.target.dataset.f] = e.target.value;
+    save();
+  }
+});
+
+document.getElementById("fAll").onclick = ()=>{filter="all";setF("fAll");render();};
+document.getElementById("fOpen").onclick = ()=>{filter="open";setF("fOpen");render();};
+function setF(id){document.querySelectorAll(".controls .ctl").forEach(b=>b.classList.remove("active"));document.getElementById(id).classList.add("active");}
+
+document.getElementById("btnExport").onclick = ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "terminid_log.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById("importFile").onchange = e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{ try{ state = JSON.parse(r.result)||{}; save(); render(); }catch(err){ alert("불러오기 실패: 올바른 JSON 파일이 아닙니다."); } };
+  r.readAsText(file);
+  e.target.value="";
+};
+document.getElementById("btnReset").onclick = ()=>{
+  if(confirm("모든 정화 기록과 날짜·메모를 초기화할까요? 되돌릴 수 없습니다.")){
+    state={}; save(); render();
+  }
+};
+
+render();
+</script>
+</body>
+</html>
