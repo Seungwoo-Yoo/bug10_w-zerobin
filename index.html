@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Saira:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <style>
   :root{
     --bg:#0c0e0a;
@@ -200,7 +202,7 @@
   <header>
     <div class="eyebrow">Super Earth Armed Forces // 작전 단말기</div>
     <h1>터미니드 전선<br><span class="acc">정화 기록부</span></h1>
-    <p class="sub">벌레(터미니드) 전선 행성 순회 체크리스트. 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 진척도는 브라우저에 자동 저장됩니다.</p>
+    <p class="sub">벌레(터미니드) 전선 행성 순회 체크리스트. 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 진척도는 서버(Firebase)에 저장되어 이 링크로 접속하는 모두에게 실시간 반영됩니다.</p>
     <div class="classified">분류: 기밀</div>
   </header>
 
@@ -226,7 +228,7 @@
 
   <footer>
     <span class="warn">⚠ 작전 참고:</span> 행성 소유권은 실시간 갤럭틱 워에 따라 매일 바뀝니다. 이 목록은 <b>터미니드 전선(은하 동부) 구역에 속한 행성과 각 행성의 고정 환경/특징</b> 기준으로 정리되었습니다. 전선이 인접 구역으로 밀릴 경우 목록에 없는 행성에서도 벌레가 출현할 수 있습니다.<br><br>
-    Meridia는 메리디안 특이점(블랙홀)으로 붕괴되어 현재 맵에 없으며 기록 목적으로만 포함했습니다. 진행 상황은 이 브라우저에 저장되므로, 백업하려면 <b>내보내기</b>로 JSON 파일을 보관하세요.
+    Meridia는 메리디안 특이점(블랙홀)으로 붕괴되어 현재 맵에 없으며 기록 목적으로만 포함했습니다. 진행 상황은 <b>Firebase 서버에 실시간 저장</b>되어 이 링크로 접속하는 모두와 자동 동기화됩니다. 백업하려면 <b>내보내기</b>로 JSON 파일을 보관하세요.
   </footer>
 </div>
 
@@ -279,16 +281,28 @@ const GROUPS = [
   ]},
 ];
 
+const firebaseConfig = {
+  apiKey: "AIzaSyAg2X1UgPxd7wgBZRJ4vsWPpaBAIHMO7-M",
+  authDomain: "terminid-with-zerobin.firebaseapp.com",
+  databaseURL: "https://terminid-with-zerobin-default-rtdb.firebaseio.com",
+  projectId: "terminid-with-zerobin",
+  storageBucket: "terminid-with-zerobin.firebasestorage.app",
+  messagingSenderId: "472884894",
+  appId: "1:472884894:web:fa8d3508f97f1c3522fd8f"
+};
+firebase.initializeApp(firebaseConfig);
+const dbRef = firebase.database().ref("terminid_state");
+
 const KEY = "hd2_terminid_log_v1";
 let state = {};
-try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ state = {}; }
 
 let filter = "all";
 const idOf = n => n.toLowerCase().replace(/[^a-z0-9가-힣]+/g,"_");
 
 function save(){
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
-  flash();
+  dbRef.set(state)
+    .then(()=>{ flash(); })
+    .catch(e=>{ console.error("Firebase 저장 실패:", e); });
 }
 let flashT;
 function flash(){
@@ -411,7 +425,14 @@ document.getElementById("btnReset").onclick = ()=>{
   }
 };
 
-render();
+dbRef.on("value", (snapshot)=>{
+  state = snapshot.val() || {};
+  render();
+}, (err)=>{
+  console.error("Firebase 연결 실패:", err);
+  document.getElementById("list").innerHTML =
+    '<p style="color:var(--hazard);font-family:JetBrains Mono, monospace;">서버 연결 실패. 규칙(rules) 또는 인터넷 연결을 확인하세요.</p>';
+});
 </script>
 </body>
 </html>
