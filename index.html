@@ -202,9 +202,15 @@
   <header>
     <div class="eyebrow">Super Earth Armed Forces // 작전 단말기</div>
     <h1>터미니드 전선<br><span class="acc">정화 기록부</span></h1>
-    <p class="sub">벌레(터미니드) 전선 행성 순회 체크리스트. 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 진척도는 서버(Firebase)에 저장되어 이 링크로 접속하는 모두에게 실시간 반영됩니다.</p>
+    <p class="sub">벌레(터미니드) 전선 행성 순회 체크리스트. 목록은 실시간 은하 전쟁 데이터(helldiverstrainingmanual.com)를 기준으로 자동 생성됩니다. 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 체크 진척도는 서버(Firebase)에 저장되어 이 링크로 접속하는 모두에게 실시간 반영됩니다.</p>
     <div class="classified">분류: 기밀</div>
   </header>
+
+  <div class="controls" style="margin-top:0;">
+    <span id="liveStatus" style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--dim);">행성 목록 불러오는 중...</span>
+    <span class="spacer"></span>
+    <button class="ctl" id="btnRefreshLive">목록 새로고침</button>
+  </div>
 
   <div class="meter">
     <div class="meter-top">
@@ -235,51 +241,60 @@
 <div class="save-flash" id="flash">저장됨</div>
 
 <script>
-const HAZARDS = ["파이어 토네이도","이온 폭풍","산성 폭풍","지진","극저온","고온","짙은 안개","폭우"];
-const SPECIAL = ["소멸","Gloom 경계","Gloom 침식","하이브 월드","온대림"];
+const HAZARDS_SLUG = ["desolate","icemoss","toxic","mesa","canyon","swamp"];
+const BIOME_KO = {
+  desert:"사막", mesa:"사막/메사", desolate:"작열/화염", swamp:"늪지", jungle:"정글",
+  rainforest:"열대우림", winter:"동토", tundra:"툰드라", icemoss:"극저온", canyon:"협곡",
+  toxic:"독성 안개", crimsonmoor:"크림슨무어", highlands:"고지대", morass:"습지",
+  undergrowth:"우거진 숲", ethereal:"에테리얼", moon:"위성", blackhole:"소멸(블랙홀)",
+  lush:"온대림", magma:"마그마", shattered:"파편화", "icemoss-special":"극저온(특수)"
+};
+const ENV_KO = {
+  "Intense Heat":"고온","Durial Intense Heat":"고온","Nocturnal Extreme Cold":"야간 극저온",
+  "Extreme Cold":"극저온","Fire Tornadoes":"파이어 토네이도","Ion Storms":"이온 폭풍",
+  "Acid Storms":"산성 폭풍","Sandstorms":"모래폭풍","Tremors":"지진","Blizzards":"블리자드",
+  "Thick Fog":"짙은 안개","Rainstorms":"폭우","Volcanic Activity":"화산 활동",
+  "Meteor Storms":"유성 폭풍"
+};
 
-const GROUPS = [
-  { code:"UMLAUT", name:"방벽 행성 · TCS", planets:[
-    {n:"펜리르 III (Fenrir III)", env:["설원/동토"], note:"TCS 방벽 행성. 포식자 변종(Predator Strain) 출몰지"},
-    {n:"에라타 프라임 (Erata Prime)", env:["사막","Gloom 경계"], note:"TCS 방벽 행성"},
-    {n:"튜링 (Turing)", env:["사막"], note:"TCS 방벽 행성"},
-    {n:"메리디아 (Meridia)", env:["소멸"], dead:true, note:"슈퍼콜로니 폭주 후 블랙홀(메리디안 특이점)로 붕괴. 현재 맵에 없음 — 기록용"},
-  ]},
-  { code:"MIRIN · DRACO · JIN XI", name:"핵심 벌레 전선", planets:[
-    {n:"헬마이어 (Hellmire)", env:["작열 사막","파이어 토네이도","고온"], note:"가장 악명높은 화염 행성"},
-    {n:"에스타누 (Estanu)", env:["한대 정글","극저온"], note:"E-710 농장 거점, Gloom 경계"},
-    {n:"크림시카 (Crimsica)", env:["정글","이온 폭풍"], note:"E-710 농장"},
-    {n:"포리 프라임 (Fori Prime)", env:["지진"], note:"벌레 재침공 발판"},
-    {n:"가크룩스 (Gacrux)", env:["늪지"], note:"패치로 늪 바이옴 전환"},
-    {n:"오샤운 (Oshaune)", env:["하이브 월드","폭우"], note:"동굴 시스템 — 내부에선 스트라타젬 호출 제한"},
-    {n:"에스커 (Esker)", env:["산성 폭풍"], note:"Hellmire 인접 전선"},
-    {n:"니벨 43 (Nivel 43)", env:["짙은 안개"], note:"하이브 브레이커 작전 대상지"},
-  ]},
-  { code:"GLOOM", name:"글룸 & 심층 벌레 우주", planets:[
-    {n:"에눌리알레 (Enuliale)", env:["이온 폭풍"], note:"Gloom(글룸) 발원지"},
-    {n:"아주르 세쿤두스 (Azur Secundus)", env:["Gloom 침식"], note:"글룸에 삼켜진 행성 (Sten Sector)"},
-    {n:"레사스 (Lesath)", env:["극저온"], note:"글룸 인근 전선"},
-    {n:"아카마르 IV (Acamar IV)", env:[], note:"글룸 작전 거점"},
-    {n:"페르카드 세쿤두스 (Pherkad Secundus)", env:[], note:"벌레 최대 팽창선"},
-    {n:"모라데시 (Moradesh)", env:[], note:"벌레 최대 팽창선"},
-    {n:"모트 (Mort)", env:["짙은 안개"], note:""},
-    {n:"판디온-XXIV (Pandion-XXIV)", env:["짙은 안개"], note:""},
-    {n:"펜타 (Penta)", env:["짙은 안개"], note:""},
-    {n:"초페사 IV (Choepessa IV)", env:["극저온"], note:""},
-    {n:"센게 23 (Senge 23)", env:["지진"], note:""},
-    {n:"메크부다 (Mekbuda)", env:["지진"], note:""},
-    {n:"푀플리 IX (Pöpli IX)", env:["파이어 토네이도"], note:""},
-  ]},
-  { code:"NEW · 2186", name:"신규 · 특수 월드", planets:[
-    {n:"브릴리언스 (Brilliance)", env:["온대림"], note:"2186 신규. 포자 폭발 변종(Spore Burst)"},
-    {n:"럭셔리언트 (Luxuriant)", env:["온대림"], note:"2186 신규. 포자 폭발 변종"},
-    {n:"빅 록 (Big Rock)", env:[], note:"포자 폭발 변종 진화체 발견지"},
-  ]},
-  { code:"ORION", name:"초기 교두보", planets:[
-    {n:"히스 (Heeth)", env:[], note:"초기 벌레 교두보 (Orion Sector)"},
-    {n:"엔젤스 벤처 (Angel's Venture)", env:[], note:"초기 벌레 교두보 (Orion Sector)"},
-  ]},
-];
+let GROUPS = [];
+let liveMeta = { updatedAt:null, ok:false, error:null };
+
+async function fetchLivePlanets(){
+  const statusUrl = "https://helldiverstrainingmanual.com/api/v1/war/status";
+  const planetsUrl = "https://helldiverstrainingmanual.com/api/v1/planets";
+  const [statusRes, planetsRes] = await Promise.all([fetch(statusUrl), fetch(planetsUrl)]);
+  if(!statusRes.ok || !planetsRes.ok) throw new Error("API 응답 실패");
+  const status = await statusRes.json();
+  const planets = await planetsRes.json();
+
+  const owned = status.planetStatus.filter(p => p.owner === 2); // 2 = Terminid
+  const bySector = {};
+  owned.forEach(p=>{
+    const info = planets[String(p.index)];
+    if(!info || !info.name) return;
+    const sector = info.sector || "미분류";
+    const slug = info.biome && info.biome.slug;
+    const envTags = (info.environmentals||[]).map(e => ENV_KO[e.name] || e.name);
+    const biomeTag = BIOME_KO[slug] || slug || null;
+    const tags = biomeTag ? [biomeTag, ...envTags] : envTags;
+    if(!bySector[sector]) bySector[sector] = [];
+    bySector[sector].push({
+      n: info.name,
+      env: tags,
+      note: `${sector} 섹터 · 현재 터미니드 점유 (players: ${p.players})`
+    });
+  });
+
+  GROUPS = Object.keys(bySector).sort().map(sector=>({
+    code: sector.toUpperCase(),
+    name: `${sector} 섹터`,
+    planets: bySector[sector]
+  }));
+  liveMeta.ok = true;
+  liveMeta.error = null;
+  liveMeta.updatedAt = new Date();
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyAg2X1UgPxd7wgBZRJ4vsWPpaBAIHMO7-M",
@@ -312,10 +327,11 @@ function flash(){
   flashT = setTimeout(()=>f.classList.remove("show"), 1100);
 }
 
+const HAZARD_TAGS = ["파이어 토네이도","이온 폭풍","산성 폭풍","지진","극저온","야간 극저온","고온","짙은 안개","폭우","모래폭풍","블리자드","화산 활동","유성 폭풍"];
+
 function tagClass(t){
-  if(HAZARDS.includes(t)) return "tag hz";
-  if(t==="소멸") return "tag dead";
-  if(SPECIAL.includes(t)) return "tag sp";
+  if(t==="소멸(블랙홀)") return "tag dead";
+  if(HAZARD_TAGS.includes(t)) return "tag hz";
   return "tag";
 }
 
@@ -425,14 +441,48 @@ document.getElementById("btnReset").onclick = ()=>{
   }
 };
 
-dbRef.on("value", (snapshot)=>{
-  state = snapshot.val() || {};
+function updateLiveStatusUI(){
+  const el = document.getElementById("liveStatus");
+  if(liveMeta.error){
+    el.style.color = "var(--hazard)";
+    el.textContent = `⚠ 실시간 데이터 갱신 실패 (${liveMeta.error}) — 마지막 목록을 표시 중`;
+  } else if(liveMeta.updatedAt){
+    el.style.color = "var(--dim)";
+    const t = liveMeta.updatedAt.toLocaleTimeString("ko-KR");
+    el.textContent = `실시간 데이터 갱신: ${t} (helldiverstrainingmanual.com)`;
+  }
+}
+
+async function refreshLiveAndRender(){
+  const el = document.getElementById("liveStatus");
+  el.textContent = "행성 목록 불러오는 중...";
+  try{
+    await fetchLivePlanets();
+  } catch(e){
+    liveMeta.ok = false;
+    liveMeta.error = e.message || "알 수 없는 오류";
+    console.error("실시간 행성 목록 로드 실패:", e);
+  }
+  updateLiveStatusUI();
   render();
-}, (err)=>{
-  console.error("Firebase 연결 실패:", err);
-  document.getElementById("list").innerHTML =
-    '<p style="color:var(--hazard);font-family:JetBrains Mono, monospace;">서버 연결 실패. 규칙(rules) 또는 인터넷 연결을 확인하세요.</p>';
-});
+}
+
+document.getElementById("btnRefreshLive").onclick = refreshLiveAndRender;
+
+let liveRefreshTimer;
+(async function init(){
+  await refreshLiveAndRender();
+  dbRef.on("value", (snapshot)=>{
+    state = snapshot.val() || {};
+    render();
+  }, (err)=>{
+    console.error("Firebase 연결 실패:", err);
+    document.getElementById("list").innerHTML =
+      '<p style="color:var(--hazard);font-family:JetBrains Mono, monospace;">서버 연결 실패. 규칙(rules) 또는 인터넷 연결을 확인하세요.</p>';
+  });
+  // 은하 전쟁 상태는 계속 바뀌므로 10분마다 자동 갱신
+  liveRefreshTimer = setInterval(refreshLiveAndRender, 10*60*1000);
+})();
 </script>
 </body>
 </html>
