@@ -202,7 +202,7 @@
   <header>
     <div class="eyebrow">Super Earth Armed Forces // 작전 단말기</div>
     <h1>터미니드 전선<br><span class="acc">정화 기록부</span></h1>
-    <p class="sub">벌레(터미니드) 전선 행성 순회 체크리스트. 목록은 실시간 은하 전쟁 데이터(helldiverstrainingmanual.com)를 기준으로 자동 생성됩니다. 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 체크 진척도는 서버(Firebase)에 저장되어 이 링크로 접속하는 모두에게 실시간 반영됩니다.</p>
+    <p class="sub">벌레(터미니드)가 과거 또는 현재 점령한 모든 전선 행성 목록입니다 (나무위키 HELLDIVERS 2/행성 문서 기준, 12개 지역). "현재 활성만" 필터로 지금 이 순간 실제로 터미니드가 점유 중인 행성만 골라볼 수 있어요 (helldiverstrainingmanual.com 실시간 데이터). 각 행성을 정화하면 표시하고, 배치 날짜와 메모를 기록하세요. 체크 진척도는 서버(Firebase)에 저장되어 이 링크로 접속하는 모두에게 실시간 반영됩니다.</p>
     <div class="classified">분류: 기밀</div>
   </header>
 
@@ -223,6 +223,7 @@
   <div class="controls">
     <button class="ctl active" id="fAll">전체 보기</button>
     <button class="ctl" id="fOpen">미정화만</button>
+    <button class="ctl" id="fActiveOnly">현재 활성만</button>
     <span class="spacer"></span>
     <button class="ctl" id="btnExport">내보내기</button>
     <label class="ctl" for="importFile">불러오기</label>
@@ -241,7 +242,6 @@
 <div class="save-flash" id="flash">저장됨</div>
 
 <script>
-const HAZARDS_SLUG = ["desolate","icemoss","toxic","mesa","canyon","swamp"];
 const BIOME_KO = {
   desert:"사막", mesa:"사막/메사", desolate:"작열/화염", swamp:"늪지", jungle:"정글",
   rainforest:"열대우림", winter:"동토", tundra:"툰드라", icemoss:"극저온", canyon:"협곡",
@@ -257,8 +257,91 @@ const ENV_KO = {
   "Meteor Storms":"유성 폭풍"
 };
 
+// 나무위키(namu.wiki/w/HELLDIVERS 2/행성 #s-5 테르미니드 문단)에서 명시적으로
+// "테르미니드 소속"으로 분류한 12개 지역 + 신규(미분류) 행성 3개.
+// 한글 명칭은 같은 문서의 "은하계 행성 목록"(#s-4) 표기를 그대로 따름.
+const STATIC_PLANETS = [
+  // 알투스 (Altus)
+  {en:"Klen Dahth II", ko:"클렌 다흐스 II", sector:"알투스 (Altus)"},
+  {en:"New Haven", ko:"뉴 헤이븐", sector:"알투스 (Altus)"},
+  {en:"Pathfinder V", ko:"패스파인더 V", sector:"알투스 (Altus)"},
+  {en:"Pilen V", ko:"필렌 V", sector:"알투스 (Altus)"},
+  {en:"Widow's Harbor", ko:"위도우스 하버", sector:"알투스 (Altus)"},
+  // 오리온 (Orion)
+  {en:"Angel's Venture", ko:"엔젤스 벤처", sector:"오리온 (Orion)"},
+  {en:"Azterra", ko:"아즈테라", sector:"오리온 (Orion)"},
+  {en:"Cirrus", ko:"시러스", sector:"오리온 (Orion)"},
+  {en:"Fort Union", ko:"포트 유니언", sector:"오리온 (Orion)"},
+  {en:"Heeth", ko:"히스", sector:"오리온 (Orion)"},
+  {en:"Terrek", ko:"테렉", sector:"오리온 (Orion)"},
+  {en:"Veld", ko:"벨드", sector:"오리온 (Orion)"},
+  // 움라우트 (Umlaut)
+  {en:"Erata Prime", ko:"에라타 프라임", sector:"움라우트 (Umlaut)"},
+  {en:"Fenrir III", ko:"펜리르 III", sector:"움라우트 (Umlaut)"},
+  {en:"Meridia", ko:"메리디아", sector:"움라우트 (Umlaut)", dead:true},
+  {en:"Turing", ko:"튜링", sector:"움라우트 (Umlaut)"},
+  // 셀레스트 (Celeste)
+  {en:"Ivis", ko:"아이비스", sector:"셀레스트 (Celeste)"},
+  {en:"Krakatwo", ko:"크라카투", sector:"셀레스트 (Celeste)"},
+  {en:"Moradesh", ko:"모라데시", sector:"셀레스트 (Celeste)"},
+  {en:"Nublaria I", ko:"누블라리아 I", sector:"셀레스트 (Celeste)"},
+  {en:"Slif", ko:"슬리프", sector:"셀레스트 (Celeste)"},
+  {en:"Sulfura", ko:"술푸라", sector:"셀레스트 (Celeste)"},
+  // 코르푸스 (Korpus)
+  {en:"Alta V", ko:"알타 V", sector:"코르푸스 (Korpus)"},
+  {en:"Caramoor", ko:"카라무어", sector:"코르푸스 (Korpus)"},
+  {en:"Crucible", ko:"크루시블", sector:"코르푸스 (Korpus)"},
+  {en:"Inari", ko:"이나리", sector:"코르푸스 (Korpus)"},
+  {en:"Volterra", ko:"볼테라", sector:"코르푸스 (Korpus)"},
+  // 보르구스 (Borgus)
+  {en:"Achernar Secundus", ko:"아케르나르 세쿤두스", sector:"보르구스 (Borgus)"},
+  {en:"Achird III", ko:"아치르드 III", sector:"보르구스 (Borgus)"},
+  {en:"Darius II", ko:"다리우스 II", sector:"보르구스 (Borgus)"},
+  {en:"Ursica XI", ko:"어르시카 XI", sector:"보르구스 (Borgus)"},
+  // 드라코 (Draco)
+  {en:"Crimsica", ko:"크림시카", sector:"드라코 (Draco)"},
+  {en:"Estanu", ko:"에스타누", sector:"드라코 (Draco)"},
+  {en:"Fori Prime", ko:"포리 프라임", sector:"드라코 (Draco)"},
+  // 미린 (Mirin)
+  {en:"Hellmire", ko:"헬마이어", sector:"미린 (Mirin)"},
+  {en:"Nivel 43", ko:"니벨 43", sector:"미린 (Mirin)"},
+  {en:"Oshaune", ko:"오샤우네", sector:"미린 (Mirin)"},
+  {en:"Zagon Prime", ko:"자곤 프라임", sector:"미린 (Mirin)"},
+  // 폴스타프 (Falstaff)
+  {en:"Bore Rock", ko:"보어 록", sector:"폴스타프 (Falstaff)"},
+  {en:"Erson Sands", ko:"어슨 샌즈", sector:"폴스타프 (Falstaff)"},
+  {en:"Esker", ko:"에스커", sector:"폴스타프 (Falstaff)"},
+  {en:"Socorro III", ko:"소코로 III", sector:"폴스타프 (Falstaff)"},
+  // 진시 (Jin Xi)
+  {en:"Acamar IV", ko:"아카마르 IV", sector:"진시 (Jin Xi)"},
+  {en:"Gacrux", ko:"개크룩스", sector:"진시 (Jin Xi)"},
+  {en:"Gar Haren", ko:"가르 하린", sector:"진시 (Jin Xi)"},
+  {en:"Gatria", ko:"가트리아", sector:"진시 (Jin Xi)"},
+  {en:"Pandion-XXIV", ko:"판디온-XXIV", sector:"진시 (Jin Xi)"},
+  {en:"Phact Bay", ko:"팍트 베이", sector:"진시 (Jin Xi)"},
+  // 스텐 (Sten)
+  {en:"Azur Secundus", ko:"아주르 세쿤두스", sector:"스텐 (Sten)"},
+  {en:"Overgoe Prime", ko:"오버고 프라임", sector:"스텐 (Sten)"},
+  {en:"Partion", ko:"파르티온", sector:"스텐 (Sten)"},
+  {en:"Peacock", ko:"피콕", sector:"스텐 (Sten)"},
+  {en:"Trandor", ko:"트랜도르", sector:"스텐 (Sten)"},
+  // 레스트레이드 (L'estrade)
+  {en:"Diaspora X", ko:"디아스포라 X", sector:"레스트레이드 (L'estrade)"},
+  {en:"Enuliale", ko:"에눌리알레", sector:"레스트레이드 (L'estrade)"},
+  {en:"Epsilon Phoencis VI", ko:"엡실론 포엔시스 VI", sector:"레스트레이드 (L'estrade)"},
+  {en:"Gemstone Bluffs", ko:"젬스톤 블러프스", sector:"레스트레이드 (L'estrade)"},
+  {en:"Nabatea Secundus", ko:"나바테아 세쿤두스", sector:"레스트레이드 (L'estrade)"},
+  {en:"Navi VII", ko:"나비 VII", sector:"레스트레이드 (L'estrade)"},
+  {en:"Omicron", ko:"오미크론", sector:"레스트레이드 (L'estrade)"},
+  // 신규 · 나무위키 미분류 (한글명은 임의 표기이므로 부정확할 수 있음)
+  {en:"Big Rock", ko:"빅 록 (미확인 표기)", sector:"신규 · 미분류"},
+  {en:"Luxuriant", ko:"럭셔리언트 (미확인 표기)", sector:"신규 · 미분류"},
+  {en:"Brilliance", ko:"브릴리언스 (미확인 표기)", sector:"신규 · 미분류"},
+];
+
 let GROUPS = [];
 let liveMeta = { updatedAt:null, ok:false, error:null };
+let showActiveOnly = false;
 
 async function fetchLivePlanets(){
   const statusUrl = "https://helldiverstrainingmanual.com/api/v1/war/status";
@@ -268,27 +351,47 @@ async function fetchLivePlanets(){
   const status = await statusRes.json();
   const planets = await planetsRes.json();
 
-  const owned = status.planetStatus.filter(p => p.owner === 2); // 2 = Terminid
-  const bySector = {};
-  owned.forEach(p=>{
-    const info = planets[String(p.index)];
+  // 영문 행성명 -> {owner, biome tags, players} 매핑
+  const infoByName = {};
+  Object.keys(planets).forEach(idx=>{
+    const info = planets[idx];
     if(!info || !info.name) return;
-    const sector = info.sector || "미분류";
-    const slug = info.biome && info.biome.slug;
-    const envTags = (info.environmentals||[]).map(e => ENV_KO[e.name] || e.name);
+    infoByName[info.name] = info;
+  });
+  const statusByIndex = {};
+  status.planetStatus.forEach(p=>{ statusByIndex[p.index] = p; });
+
+  const bySector = {};
+  STATIC_PLANETS.forEach(sp=>{
+    const info = infoByName[sp.en];
+    let isActive = false, players = null;
+    if(info){
+      // 인덱스를 이름으로 역매칭
+      const idxEntry = Object.keys(planets).find(k => planets[k] && planets[k].name === sp.en);
+      if(idxEntry !== undefined){
+        const st = statusByIndex[Number(idxEntry)];
+        if(st){ isActive = st.owner === 2; players = st.players; }
+      }
+    }
+    const slug = info && info.biome && info.biome.slug;
+    const envTags = info ? (info.environmentals||[]).map(e => ENV_KO[e.name] || e.name) : [];
     const biomeTag = BIOME_KO[slug] || slug || null;
     const tags = biomeTag ? [biomeTag, ...envTags] : envTags;
-    if(!bySector[sector]) bySector[sector] = [];
-    bySector[sector].push({
-      n: info.name,
+
+    if(!bySector[sp.sector]) bySector[sp.sector] = [];
+    bySector[sp.sector].push({
+      n: `${sp.ko} (${sp.en})`,
       env: tags,
-      note: `${sector} 섹터 · 현재 터미니드 점유 (players: ${p.players})`
+      dead: sp.dead || false,
+      isActive,
+      note: sp.dead ? "블랙홀로 붕괴 — 현재 맵에 없음, 기록용" :
+            (isActive ? `현재 터미니드 점유 중${players!=null?` · 접속 ${players}명`:""}` : "현재는 슈퍼어스(인간) 소유 — 과거 터미니드 전선")
     });
   });
 
-  GROUPS = Object.keys(bySector).sort().map(sector=>({
-    code: sector.toUpperCase(),
-    name: `${sector} 섹터`,
+  GROUPS = Object.keys(bySector).map(sector=>({
+    code: sector,
+    name: sector,
     planets: bySector[sector]
   }));
   liveMeta.ok = true;
@@ -343,6 +446,7 @@ function render(){
   GROUPS.forEach(g=>{
     const visible = g.planets.filter(p=>{
       const s = state[idOf(p.n)] || {};
+      if(showActiveOnly && !p.isActive) return false;
       if(filter==="open") return !s.cleared;
       return true;
     });
@@ -353,18 +457,22 @@ function render(){
     const sec = document.createElement("section");
     sec.className="sector";
     const gd = g.planets.filter(p=>(state[idOf(p.n)]||{}).cleared).length;
+    const activeCount = g.planets.filter(p=>p.isActive).length;
     sec.innerHTML = `<div class="sector-head">
         <span class="sector-code">${g.code}</span>
         <span class="sector-name">${g.name}</span>
-        <span class="sector-count">${gd}/${g.planets.length} 정화</span>
+        <span class="sector-count">${gd}/${g.planets.length} 정화 · 현재 활성 ${activeCount}개</span>
       </div>`;
 
     visible.forEach(p=>{
       const id = idOf(p.n);
       const s = state[id] || {};
       const card = document.createElement("div");
-      card.className = "card" + (s.cleared?" cleared":"") + (p.dead?" dead":"");
+      card.className = "card" + (s.cleared?" cleared":"") + (p.dead?" dead":"") + (p.isActive?" is-active":"");
       const tags = (p.env||[]).map(t=>`<span class="${tagClass(t)}">${t}</span>`).join("");
+      const activeBadge = p.dead ? "" : (p.isActive
+        ? `<span class="tag hz" style="border-color:var(--cleared);color:var(--cleared);">● 현재 활성</span>`
+        : `<span class="tag" style="opacity:0.55;">○ 비활성 (해방됨)</span>`);
       card.innerHTML = `
         <label class="chk">
           <input type="checkbox" ${s.cleared?"checked":""} data-id="${id}">
@@ -372,7 +480,7 @@ function render(){
         </label>
         <div class="body">
           <div class="pname">${p.n}</div>
-          <div class="tags">${tags}</div>
+          <div class="tags">${activeBadge}${tags}</div>
           ${p.note?`<div class="note">${p.note}</div>`:""}
         </div>
         <div class="meta">
@@ -418,7 +526,12 @@ document.getElementById("list").addEventListener("change", e=>{
 
 document.getElementById("fAll").onclick = ()=>{filter="all";setF("fAll");render();};
 document.getElementById("fOpen").onclick = ()=>{filter="open";setF("fOpen");render();};
-function setF(id){document.querySelectorAll(".controls .ctl").forEach(b=>b.classList.remove("active"));document.getElementById(id).classList.add("active");}
+function setF(id){document.querySelectorAll("#fAll,#fOpen").forEach(b=>b.classList.remove("active"));document.getElementById(id).classList.add("active");}
+document.getElementById("fActiveOnly").onclick = (e)=>{
+  showActiveOnly = !showActiveOnly;
+  e.target.classList.toggle("active", showActiveOnly);
+  render();
+};
 
 document.getElementById("btnExport").onclick = ()=>{
   const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
@@ -462,6 +575,18 @@ async function refreshLiveAndRender(){
     liveMeta.ok = false;
     liveMeta.error = e.message || "알 수 없는 오류";
     console.error("실시간 행성 목록 로드 실패:", e);
+    if(GROUPS.length === 0){
+      // 첫 로드부터 실패한 경우: 활성 여부를 알 수 없는 상태로 정적 목록만 표시
+      const bySector = {};
+      STATIC_PLANETS.forEach(sp=>{
+        if(!bySector[sp.sector]) bySector[sp.sector] = [];
+        bySector[sp.sector].push({
+          n: `${sp.ko} (${sp.en})`, env: [], dead: sp.dead || false, isActive: false,
+          note: sp.dead ? "블랙홀로 붕괴 — 현재 맵에 없음, 기록용" : "실시간 활성 여부 확인 실패 (네트워크/CORS)"
+        });
+      });
+      GROUPS = Object.keys(bySector).map(sector=>({ code:sector, name:sector, planets:bySector[sector] }));
+    }
   }
   updateLiveStatusUI();
   render();
